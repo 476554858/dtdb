@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<context:component-scan base-package="com.db">
+		<context:exclude-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+
+	<context:property-placeholder location="classpath:db.properties"/>
+	<bean id="dataSource1" class="com.alibaba.druid.pool.DruidDataSource">
+		<property name="driverClassName" value="${mjdbc.driver}"></property>
+		<property name="url" value="${mjdbc.url}"></property>
+		<property name="username" value="${mjdbc.username}"></property>
+		<property name="password" value="${mjdbc.password}"></property>
+	</bean>
+	<bean id="dataSource2" class="com.alibaba.druid.pool.DruidDataSource">
+		<property name="driverClassName" value="${sjdbc.driver}"></property>
+		<property name="url" value="${sjdbc.url}"></property>
+		<property name="username" value="${sjdbc.username}"></property>
+		<property name="password" value="${sjdbc.password}"></property>
+	</bean>
+
+	<!-- 配置多数据源映射关系 -->
+	<bean id="dynamicDataSource" class="com.db.datasource.DynamicDataSource">
+		<property name="targetDataSources">
+			<map key-type="java.lang.String">
+				<entry key="dataSource1" value-ref="dataSource1"></entry>
+				<entry key="dataSource2" value-ref="dataSource2"></entry>
+			</map>
+		</property>
+		<!-- 默认目标数据源为你主库数据源 -->
+		<property name="defaultTargetDataSource" ref="dataSource1"/>
+	</bean>
+
+
+	<bean id="dynamicDataSourceSelector" class="com.db.datasource.DataSourceSelector" />
+
+	<bean id="sqlSessionFactoryBean" class="com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean">
+		<!-- 数据源 -->
+		<property name="dataSource" ref="dynamicDataSource"></property>
+		<property name="globalConfig" ref="globalConfiguration"></property>
+		<property name="mapperLocations" value="classpath*:mapper/*Mapper.xml"></property>
+		<property name="plugins">
+			<list>
+				<!-- 注册分页插件 -->
+				<bean class="com.baomidou.mybatisplus.plugins.PaginationInterceptor"></bean>
+			</list>
+		</property>
+	</bean>
+	<!-- 插件注册 -->
+
+
+	<bean id="globalConfiguration" class="com.baomidou.mybatisplus.entity.GlobalConfiguration">
+		<!-- 2.3以后默认值就是true -->
+		<property name="dbColumnUnderline" value="false"></property>
+	</bean>
+
+
+
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.db.dao"></property>
+	</bean>
+
+	<!-- 配置自动为匹配 aspectJ 注解的 Java 类生成代理对象 -->
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+
+
+</beans>
